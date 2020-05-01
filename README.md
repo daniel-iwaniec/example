@@ -1,2 +1,2 @@
-# example
-Example implementation
+# Example
+Example project for experimental and showcasing purposes.
