@@ -2,6 +2,10 @@ services:
     _defaults:
         autowire: true
         autoconfigure: true
+        bind:
+            Psr\Container\ContainerInterface $webResponders: !tagged_locator {tag: 'example.web.responder'}
+    _instanceof:
+        Example\Web\Responder: {tags: ['example.web.responder']}
 
     Example\:
         resource: '../src/*'
