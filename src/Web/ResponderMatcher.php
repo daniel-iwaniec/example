@@ -4,8 +4,11 @@ declare(strict_types = 1);
 
 namespace Example\Web;
 
+use Example\Web\Responder\Group\JsonResponder;
 use Generator;
+use IteratorAggregate;
 use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use ReflectionClass;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\ControllerEvent;
@@ -15,13 +18,18 @@ use Symfony\Component\HttpKernel\KernelEvents;
 
 final class ResponderMatcher implements EventSubscriberInterface
 {
-    private ContainerInterface $webResponders;
+    /** @var ContainerInterface<Responder> */
+    private ContainerInterface $responders;
 
-    private Responder $responder;
+    /** @var IteratorAggregate<int, Responder> */
+    private IteratorAggregate $commonResponders;
 
-    public function __construct(ContainerInterface $webResponders)
+    private ?Responder $responder = null;
+
+    public function __construct(ContainerInterface $webResponders, IteratorAggregate $webCommonResponders)
     {
-        $this->webResponders = $webResponders;
+        $this->responders = $webResponders;
+        $this->commonResponders = $webCommonResponders;
     }
 
     /**
@@ -36,17 +44,45 @@ final class ResponderMatcher implements EventSubscriberInterface
 
     public function createResponder(ControllerEvent $event): void
     {
-        $name = Responder::class . '\\' . (new ReflectionClass($event->getController()))->getShortName();
-        $this->responder = $this->webResponders->get($name);
+        $this->responder = $this->chooseResponder($event);
+    }
+
+    private function chooseResponder(ControllerEvent $event): Responder
+    {
+        if ($event->getRequest()->query->get('format') === 'json') {
+            return $this->responders->get(JsonResponder::class);
+        }
+
+        try {
+            $name = Responder::class . '\\' . (new ReflectionClass($event->getController()))->getShortName();
+
+            return $this->responders->get($name);
+        } catch (NotFoundExceptionInterface $exception) {
+            foreach ($this->commonResponders as $responder) {
+                if ($responder->matches($event->getRequest())) {
+                    return $responder;
+                }
+            }
+        }
+
+        return $this->responders->get(JsonResponder::class);
     }
 
     public function createResponse(ViewEvent $event): void
     {
+        if (!$this->responder) {
+            return;
+        }
+
         $event->setResponse(($this->responder)($event->getControllerResult()));
     }
 
     public function createExceptionResponse(ExceptionEvent $event): void
     {
+        if (!$this->responder) {
+            return;
+        }
+
         $event->setResponse(($this->responder)($event->getThrowable()->getPrevious()));
     }
 }

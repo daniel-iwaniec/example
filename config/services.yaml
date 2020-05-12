@@ -4,8 +4,10 @@ services:
         autoconfigure: true
         bind:
             Psr\Container\ContainerInterface $webResponders: !tagged_locator {tag: 'example.web.responder'}
+            IteratorAggregate $webCommonResponders: !tagged {tag: 'example.web.common_responder'}
     _instanceof:
         Example\Web\Responder: {tags: ['example.web.responder']}
+        Example\Web\CommonResponder: {tags: ['example.web.common_responder']}
 
     Example\:
         resource: '../src/*'
