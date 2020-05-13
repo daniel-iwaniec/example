@@ -4,7 +4,7 @@ declare(strict_types = 1);
 
 namespace Example\Web;
 
-use Example\Web\Responder\Group\JsonResponder;
+use Example\Web\Responder\Common\JsonResponder;
 use Generator;
 use IteratorAggregate;
 use Psr\Container\ContainerInterface;
@@ -18,14 +18,17 @@ use Symfony\Component\HttpKernel\KernelEvents;
 
 final class ResponderMatcher implements EventSubscriberInterface
 {
-    /** @var ContainerInterface<Responder> */
     private ContainerInterface $responders;
 
-    /** @var IteratorAggregate<int, Responder> */
+    /** @var IteratorAggregate<int, CommonResponder<mixed>> */
     private IteratorAggregate $commonResponders;
 
+    /** @var Responder<mixed>|null */
     private ?Responder $responder = null;
 
+    /**
+     * @param IteratorAggregate<int, CommonResponder<mixed>> $webCommonResponders
+     */
     public function __construct(ContainerInterface $webResponders, IteratorAggregate $webCommonResponders)
     {
         $this->responders = $webResponders;
@@ -47,6 +50,9 @@ final class ResponderMatcher implements EventSubscriberInterface
         $this->responder = $this->chooseResponder($event);
     }
 
+    /**
+     * @return Responder<mixed>
+     */
     private function chooseResponder(ControllerEvent $event): Responder
     {
         if ($event->getRequest()->query->get('format') === 'json') {
@@ -54,9 +60,12 @@ final class ResponderMatcher implements EventSubscriberInterface
         }
 
         try {
-            $name = Responder::class . '\\' . (new ReflectionClass($event->getController()))->getShortName();
+            $action = $event->getController();
+            if ($action instanceof Action) {
+                $name = Responder::class . '\\' . (new ReflectionClass($action))->getShortName();
+            }
 
-            return $this->responders->get($name);
+            return $this->responders->get($name ?? '');
         } catch (NotFoundExceptionInterface $exception) {
             foreach ($this->commonResponders as $responder) {
                 if ($responder->matches($event->getRequest())) {
@@ -74,7 +83,7 @@ final class ResponderMatcher implements EventSubscriberInterface
             return;
         }
 
-        $event->setResponse(($this->responder)($event->getControllerResult()));
+        $event->setResponse($this->responder->respond($event->getControllerResult()));
     }
 
     public function createExceptionResponse(ExceptionEvent $event): void
@@ -83,6 +92,6 @@ final class ResponderMatcher implements EventSubscriberInterface
             return;
         }
 
-        $event->setResponse(($this->responder)($event->getThrowable()->getPrevious()));
+        $event->setResponse($this->responder->respondToException($event->getThrowable()));
     }
 }

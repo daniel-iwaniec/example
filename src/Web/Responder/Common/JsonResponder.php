@@ -2,12 +2,17 @@
 
 declare(strict_types = 1);
 
-namespace Example\Web\Responder\Group;
+namespace Example\Web\Responder\Common;
 
 use Example\Web\CommonResponder;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Throwable;
 
+/**
+ * @template D
+ * @implements CommonResponder<D>
+ */
 class JsonResponder implements CommonResponder
 {
     public function matches(Request $request): bool
@@ -15,8 +20,13 @@ class JsonResponder implements CommonResponder
         return $request->isXmlHttpRequest();
     }
 
-    public function __invoke($data): JsonResponse
+    public function respond($data): JsonResponse
     {
         return new JsonResponse($data);
+    }
+
+    public function respondToException(Throwable $exception): JsonResponse
+    {
+        return new JsonResponse($exception->getMessage());
     }
 }

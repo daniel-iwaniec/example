@@ -6,11 +6,20 @@ namespace Example\Web\Responder;
 
 use Example\Web\Responder;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Throwable;
 
+/**
+ * @implements Responder<string>
+ */
 class ShowCatalog implements Responder
 {
-    public function __invoke(string $catalog): JsonResponse
+    public function respond($catalog): JsonResponse
     {
         return new JsonResponse($catalog);
+    }
+
+    public function respondToException(Throwable $exception): JsonResponse
+    {
+        return new JsonResponse($exception->getMessage());
     }
 }
