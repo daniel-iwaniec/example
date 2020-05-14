@@ -10,8 +10,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Throwable;
 
 /**
- * @template D
- * @implements CommonResponder<D>
+ * @implements CommonResponder<mixed>
  */
 class JsonResponder implements CommonResponder
 {
