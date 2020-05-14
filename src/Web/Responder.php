@@ -8,12 +8,12 @@ use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 /**
- * @template D
+ * @template T
  */
 interface Responder
 {
     /**
-     * @param D $data
+     * @param T $data
      */
     public function respond($data): Response;
 

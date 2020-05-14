@@ -7,8 +7,8 @@ namespace Example\Web;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * @template D
- * @extends Responder<D>
+ * @template T
+ * @extends Responder<T>
  */
 interface CommonResponder extends Responder
 {
