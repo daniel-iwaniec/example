@@ -8,12 +8,9 @@ use Example\Web\Responder;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Throwable;
 
-/**
- * @implements Responder<string>
- */
 class ShowCatalog implements Responder
 {
-    public function respond($catalog): JsonResponse
+    public function respond(object $catalog): JsonResponse
     {
         return new JsonResponse($catalog);
     }

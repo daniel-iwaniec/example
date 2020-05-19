@@ -11,6 +11,7 @@ use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use ReflectionClass;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\ControllerEvent;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Event\ViewEvent;
@@ -20,14 +21,13 @@ final class ResponderMatcher implements EventSubscriberInterface
 {
     private ContainerInterface $responders;
 
-    /** @var IteratorAggregate<int, CommonResponder<mixed>> */
+    /** @var IteratorAggregate<int, CommonResponder> */
     private IteratorAggregate $commonResponders;
 
-    /** @var Responder<mixed>|null */
-    private ?Responder $responder = null;
+    private Responder $responder;
 
     /**
-     * @param IteratorAggregate<int, CommonResponder<mixed>> $webCommonResponders
+     * @param IteratorAggregate<int, CommonResponder> $webCommonResponders
      */
     public function __construct(ContainerInterface $webResponders, IteratorAggregate $webCommonResponders)
     {
@@ -47,51 +47,32 @@ final class ResponderMatcher implements EventSubscriberInterface
 
     public function createResponder(ControllerEvent $event): void
     {
-        $this->responder = $this->chooseResponder($event);
-    }
-
-    /**
-     * @return Responder<mixed>
-     */
-    private function chooseResponder(ControllerEvent $event): Responder
-    {
-        if ($event->getRequest()->query->get('format') === 'json') {
-            return $this->responders->get(JsonResponder::class);
-        }
-
-        try {
-            $action = $event->getController();
-            if ($action instanceof Action) {
-                $name = Responder::class . '\\' . (new ReflectionClass($action))->getShortName();
+        $this->responder = (function (Request $request, object $action) {
+            if ($request->query->get('format') === 'json') {
+                return $this->responders->get(JsonResponder::class);
             }
 
-            return $this->responders->get($name ?? '');
-        } catch (NotFoundExceptionInterface $exception) {
-            foreach ($this->commonResponders as $responder) {
-                if ($responder->matches($event->getRequest())) {
-                    return $responder;
+            try {
+                return $this->responders->get(Responder::class . '\\' . (new ReflectionClass($action))->getShortName());
+            } catch (NotFoundExceptionInterface $exception) {
+                foreach ($this->commonResponders as $responder) {
+                    if ($responder->matches($request)) {
+                        return $responder;
+                    }
                 }
             }
-        }
 
-        return $this->responders->get(JsonResponder::class);
+            return $this->responders->get(JsonResponder::class);
+        })($event->getRequest(), (object) $event->getController());
     }
 
     public function createResponse(ViewEvent $event): void
     {
-        if (!$this->responder) {
-            return;
-        }
-
         $event->setResponse($this->responder->respond($event->getControllerResult()));
     }
 
     public function createExceptionResponse(ExceptionEvent $event): void
     {
-        if (!$this->responder) {
-            return;
-        }
-
         $event->setResponse($this->responder->respondToException($event->getThrowable()));
     }
 }

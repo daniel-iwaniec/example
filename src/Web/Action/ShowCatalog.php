@@ -4,12 +4,15 @@ declare(strict_types = 1);
 
 namespace Example\Web\Action;
 
-use Example\Web\Action;
+use stdClass;
 
-class ShowCatalog implements Action
+class ShowCatalog
 {
-    public function __invoke(): string
+    public function __invoke(): stdClass
     {
-        return 'catalog';
+        $response = new stdClass();
+        $response->message = 'message';
+
+        return $response;
     }
 }

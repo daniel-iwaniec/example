@@ -9,9 +9,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Throwable;
 
-/**
- * @implements CommonResponder<mixed>
- */
 class JsonResponder implements CommonResponder
 {
     public function matches(Request $request): bool
@@ -19,7 +16,7 @@ class JsonResponder implements CommonResponder
         return $request->isXmlHttpRequest();
     }
 
-    public function respond($data): JsonResponse
+    public function respond(object $data): JsonResponse
     {
         return new JsonResponse($data);
     }
